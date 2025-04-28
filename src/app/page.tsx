@@ -4,16 +4,20 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { GraphQLClient, gql } from "graphql-request";
 
+//zod schema for form validation
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
 });
 
 type FormData = z.infer<typeof schema>;
+const endpoint = (process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT as string);
 
 export default function EarlyAccessPage() {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<boolean>(false);
+  const [error, setError] = useState<boolean>(false);
 
   const {
     register,
@@ -23,9 +27,36 @@ export default function EarlyAccessPage() {
     resolver: zodResolver(schema),
   });
 
-  const onSubmit = (data: FormData) => {
-    console.log("Form Submitted", data);
-    setSubmitted(true);
+  const onSubmit = async (data: FormData) => {
+    //send data to GraphQL endpoint
+    const graphQlClient = new GraphQLClient(endpoint, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_AUTH_TOKEN}`,
+      },
+    });
+
+    const mutation = gql`
+      mutation Member($name: String!, $email: String!) {
+        createMembers(data: { name: $name, email: $email }) {
+          id
+          name
+          email
+      }
+    }
+    `;
+
+    const variables = {
+      name: data.name,
+      email: data.email,
+    }
+
+    const req = await graphQlClient.request(mutation, variables);
+    if (req) {
+      setSubmitted(true);
+    } else {
+      setError(true);
+    }
   };
 
   return (
@@ -46,7 +77,7 @@ export default function EarlyAccessPage() {
           Be the first to experience the fastest way to build professional resumes and accelerate your job search.
         </p>
 
-        {!submitted ? (
+        {!submitted && (
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
             <input
               type="text"
@@ -71,10 +102,14 @@ export default function EarlyAccessPage() {
               Join Now
             </button>
           </form>
-        ) : (
+        )} {submitted && (
           <div className="mt-8 text-green-600 text-lg font-semibold">
             Thank you for signing up! We will contact you when QuicklyCV is ready.
           </div>
+        )}{error && (
+          <div className="mt-8 text-red-600 text-lg font-semibold">
+          Something went wrong. Please try again later.
+        </div>
         )}
 
         {/* Note */}
