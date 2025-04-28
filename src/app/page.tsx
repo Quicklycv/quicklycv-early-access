@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GraphQLClient, gql } from "graphql-request";
@@ -18,6 +18,7 @@ const endpoint = (process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT as string);
 export default function EarlyAccessPage() {
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const {
     register,
@@ -29,6 +30,7 @@ export default function EarlyAccessPage() {
 
   const onSubmit = async (data: FormData) => {
     //send data to GraphQL endpoint
+    setLoading(true);
     const graphQlClient = new GraphQLClient(endpoint, {
       headers: {
         "Content-Type": "application/json",
@@ -99,7 +101,7 @@ export default function EarlyAccessPage() {
               type="submit"
               className="w-full rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 transition"
             >
-              Join Now
+              {loading ? "Loading..." : "Get Early Access"} 
             </button>
           </form>
         )} {submitted && (
